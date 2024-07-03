@@ -38,7 +38,8 @@ public class Program
         }
         while (true)
         {
-            if(settings == null)
+            logger = Logger.UpdateLogFileName();
+            if (settings == null)
             {
                 logger.Write($"Ошибка десериализации настроек");
                 Console.ReadLine();
@@ -47,15 +48,18 @@ public class Program
             var mailer = new Post(settings);
             var folderAttach = Path.Combine(Directory.GetCurrentDirectory(), "Attachments");
             List<Message> messages = new List<Message>();
+
             try
             {
-                //var test = new DateTime(2024, 05, 22);
                 messages = mailer.GetMails(DateTime.Now, folderAttach);
             }
             catch (Exception ex)
             {
-                logger.Write($"Ошибка {ex}");
+                if (ex.ToString().Contains("Попытка установить соединение была безуспешной"))
+                    logger.Write("Ошибка: Сервер не отвечает.");
+                logger.Write($"Ошибка: {ex}");
             }
+
             foreach (var message in messages)
             {
                 try
@@ -83,7 +87,7 @@ public class Program
                                         $"Ваше сообщение \"{subject}\" доставлено получателю: {Post.GetStringAddresses(addresses)}");
                                 _sentMessages.Add(message.Id);
                                 var addr = string.Join(",", addresses);
-                                logger.Write($"{DateTime.Now} Пересылка для {addr}: \"{subject}\". ИД: {message.Id}");
+                                logger.Write($"От {message.From} на {addr} с темой \"{subject}\". {message.Id}");
                             }
                             catch (Exception ex)
                             {
