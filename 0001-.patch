@@ -1,0 +1,88 @@
+From cb2ea63e82857e9e2dd6759de56853d09a69090b Mon Sep 17 00:00:00 2001
+From: ndubovskov <ndubovskov@DESKTOP-GVJB0RR>
+Date: Wed, 3 Jul 2024 14:50:10 +0500
+Subject: [PATCH] =?UTF-8?q?=D0=98=D1=81=D0=BF=D1=80=D0=B0=D0=B2=D0=B8?=
+ =?UTF-8?q?=D0=BB=20=D0=BB=D0=BE=D0=B3=D0=B3=D0=B5=D1=80?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+	*чтобы создавал файл ежедневно
+	*укоротил ошибку подключения к серверу, чтобы не забивал лог
+---
+ Forwarder.csproj |  2 +-
+ Program.cs       | 12 ++++++++----
+ README.md        |  4 +++-
+ 3 files changed, 12 insertions(+), 6 deletions(-)
+
+diff --git a/Forwarder.csproj b/Forwarder.csproj
+index eb16a81..ac65a6a 100644
+--- a/Forwarder.csproj
++++ b/Forwarder.csproj
+@@ -13,7 +13,7 @@
+   </ItemGroup>
+ 
+   <ItemGroup>
+-    <PackageReference Include="MailKit" Version="4.6.0" />
++    <PackageReference Include="MailKit" Version="4.7.0" />
+     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+   </ItemGroup>
+ 
+diff --git a/Program.cs b/Program.cs
+index dd8f09f..ed639ee 100644
+--- a/Program.cs
++++ b/Program.cs
+@@ -38,7 +38,8 @@ public class Program
+         }
+         while (true)
+         {
+-            if(settings == null)
++            logger = Logger.UpdateLogFileName();
++            if (settings == null)
+             {
+                 logger.Write($"Ошибка десериализации настроек");
+                 Console.ReadLine();
+@@ -47,15 +48,18 @@ public class Program
+             var mailer = new Post(settings);
+             var folderAttach = Path.Combine(Directory.GetCurrentDirectory(), "Attachments");
+             List<Message> messages = new List<Message>();
++
+             try
+             {
+-                //var test = new DateTime(2024, 05, 22);
+                 messages = mailer.GetMails(DateTime.Now, folderAttach);
+             }
+             catch (Exception ex)
+             {
+-                logger.Write($"Ошибка {ex}");
++                if (ex.ToString().Contains("Попытка установить соединение была безуспешной"))
++                    logger.Write("Ошибка: Сервер не отвечает.");
++                logger.Write($"Ошибка: {ex}");
+             }
++
+             foreach (var message in messages)
+             {
+                 try
+@@ -83,7 +87,7 @@ public class Program
+                                         $"Ваше сообщение \"{subject}\" доставлено получателю: {Post.GetStringAddresses(addresses)}");
+                                 _sentMessages.Add(message.Id);
+                                 var addr = string.Join(",", addresses);
+-                                logger.Write($"{DateTime.Now} Пересылка для {addr}: \"{subject}\". ИД: {message.Id}");
++                                logger.Write($"От {message.From} на {addr} с темой \"{subject}\". {message.Id}");
+                             }
+                             catch (Exception ex)
+                             {
+diff --git a/README.md b/README.md
+index f0d5656..4f80127 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1,3 @@
+-# Forwarder
+\ No newline at end of file
++# Forwarder
++Пересылка писем. Для отработки пересылки тема должна быть вида: пересылка;адресат@mail.ru;тема
++Настройки получаем из файла settings.json (должен лежать в папке с exe)
+\ No newline at end of file
+-- 
+2.45.2.windows.1
+
