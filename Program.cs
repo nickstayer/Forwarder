@@ -24,8 +24,6 @@ public class Program
         //settings.UseSsl = false;
         //settings.UsernameWithoutDog = false;
 
-
-
         try
         {
             settings = Settings.DeserializeSettings(settingsFile);
