@@ -9,6 +9,8 @@ public class Program
     {
         var settingsFile = Path.Combine(Directory.GetCurrentDirectory(), "settings.json");
         var logger = Logger.UpdateLogFileName();
+        var list = logger.GetMessageId();
+        _sentMessages.AddRange(list);
         Settings? settings;
 
         //settings.PeriodMinutes = 15;
@@ -81,7 +83,8 @@ public class Program
                                     mailer.SendMail(new string[] { message.From }, 
                                         "Отчет о доставке",
                                         $"Ваше сообщение \"{subject}\" доставлено получателю: {Post.GetStringAddresses(addresses)}");
-                                _sentMessages.Add(message.Id);
+                                if(!_sentMessages.Contains(message.Id))
+                                    _sentMessages.Add(message.Id);
                                 var addr = string.Join(",", addresses);
                                 logger.Write($"От {message.From} на {addr} с темой \"{subject}\". {message.Id}");
                             }

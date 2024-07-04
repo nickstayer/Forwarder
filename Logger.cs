@@ -1,4 +1,6 @@
-﻿namespace Forwarder;
+﻿using System.Text.RegularExpressions;
+
+namespace Forwarder;
 
 public class Logger
 {
@@ -34,5 +36,22 @@ public class Logger
             return new Logger(logFile);
         }
         return logger;
+    }
+
+    public List<string> GetMessageId()
+    {
+        var result = new List<string>();
+        if(!File.Exists(_file)) { return result; }
+        var lines = File.ReadAllLines(_file);
+        foreach (var line in lines)
+        {
+            if(Regex.IsMatch(line, @"^\d{2}\.\d{2}\.\d{4}"))
+            {
+                var id = line.Split().Last();
+                if(id.Contains("@") && !result.Contains(id))
+                    result.Add(id);
+            }
+        }
+        return result;
     }
 }
