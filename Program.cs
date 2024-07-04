@@ -53,9 +53,7 @@ public class Program
             }
             catch (Exception ex)
             {
-                if (ex.ToString().Contains("Попытка установить соединение была безуспешной"))
-                    logger.Write("Ошибка: Сервер не отвечает.");
-                else logger.Write($"Ошибка: {ex}");
+                logger.Write($"Ошибка: {ex.Message}");
             }
 
             foreach (var message in messages)
