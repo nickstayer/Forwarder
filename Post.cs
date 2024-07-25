@@ -12,9 +12,11 @@ namespace Forwarder;
 public class Post
 {
     private readonly Settings _settings;
-    public Post(Settings settings)
+    private readonly Logger _logger;
+    public Post(Settings settings, Logger logger)
     {
         _settings = settings;
+        _logger = logger;
     }
 
     public void SendMail(string[] toAddresses, string subject, string body = null, string[] files = null)
@@ -99,20 +101,27 @@ public class Post
                     var attachments = new List<string>();
                     foreach (var attachment in summury.Attachments.OfType<BodyPartBasic>())
                     {
-                        var part = (MimePart)client.Inbox.GetBodyPart(summury.UniqueId, attachment);
-                        if (!Directory.Exists(attachmentsPath))
+                        try
                         {
-                            Directory.CreateDirectory(attachmentsPath);
-                        }
-                        var file = Path.Combine(attachmentsPath, part.FileName);
-                        if (!File.Exists(file))
-                        {
-                            using (var strm = File.Create(file))
+                            var part = (MimePart)client.Inbox.GetBodyPart(summury.UniqueId, attachment);
+                            if (!Directory.Exists(attachmentsPath))
                             {
+                                Directory.CreateDirectory(attachmentsPath);
+                            }
+                            var file = Path.Combine(attachmentsPath, part.FileName);
+                            if (!File.Exists(file))
+                            {
+                                using var strm = File.Create(file);
                                 part.Content.DecodeTo(strm);
                             }
+                            attachments.Add(file);
                         }
-                        attachments.Add(file);
+                        catch (Exception)
+                        {
+                            _logger.Write($"Не удалось получить вложения письма с темой \"{summury.Envelope.Subject}\", " +
+                                $"отправитель: {summury.Envelope.From.Mailboxes.FirstOrDefault()?.Address}");
+                            continue;
+                        }
                     }
                     var message = new Message();
                     message.Id = summury.Envelope.MessageId;

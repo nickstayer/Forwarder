@@ -45,7 +45,7 @@ public class Program
                 Console.ReadLine();
                 return;
             }
-            var mailer = new Post(settings);
+            var mailer = new Post(settings, logger);
             var folderAttach = Path.Combine(Directory.GetCurrentDirectory(), "Attachments");
             List<Message> messages = new List<Message>();
 
@@ -82,7 +82,7 @@ public class Program
                                 if (!string.IsNullOrEmpty(message.From))
                                     mailer.SendMail(new string[] { message.From }, 
                                         "Отчет о доставке",
-                                        $"Ваше сообщение \"{subject}\" доставлено получателю: {Post.GetStringAddresses(addresses)}");
+                                        $"Ваше сообщение \"{subject}\" для {Post.GetStringAddresses(addresses)} доставлено на сервер пересылки");
                                 if(!_sentMessages.Contains(message.Id))
                                     _sentMessages.Add(message.Id);
                                 var addr = string.Join(",", addresses);
@@ -90,7 +90,6 @@ public class Program
                             }
                             catch (Exception ex)
                             {
-
                                 logger.Write($"Возникла ошибка при отправке почты: {ex.Message}");
                             }
                         }
