@@ -13,53 +13,53 @@ public class Post
 {
     private readonly Settings _settings;
     private readonly Logger _logger;
-    public Post(Settings settings, Logger logger)
+    private readonly List<string> _processedMessages;
+    public Post(Settings settings, Logger logger, List<string> processedMessages)
     {
         _settings = settings;
         _logger = logger;
+        _processedMessages = processedMessages;
     }
 
     public void SendMail(string[] toAddresses, string subject, string body = null, string[] files = null)
     {
-        using (var client = new SmtpClient())
+        using var client = new SmtpClient();
+        if (_settings.UseSsl)
         {
-            if (_settings.UseSsl)
-            {
-                client.Connect(_settings.SmtpServer, _settings.SmtpPort, true); //yandex
-            }
-
-            else
-            {
-                DisableCertificateValidation();
-                client.Connect(_settings.SmtpServer, _settings.SmtpPort, SecureSocketOptions.StartTls); //isod
-            }
-
-            var username = _settings.UsernameWithoutDog ? _settings.User.Split("@")[0] : _settings.User;
-            client.Authenticate(username, _settings.Password);
-
-
-            var bodyBldr = new BodyBuilder();
-            bodyBldr.TextBody = body;
-            bodyBldr.HtmlBody = body;
-            if (files != null)
-            {
-                foreach (string file in files)
-                {
-                    bodyBldr.Attachments.Add(file);
-                }
-            }
-            var msg = new MimeMessage()
-            {
-                Subject = subject,
-                Body = bodyBldr.ToMessageBody(),
-            };
-            foreach (var address in toAddresses)
-            {
-                msg.To.Add(MailboxAddress.Parse(address));
-            }
-            msg.From.Add(new MailboxAddress(_settings.User, _settings.User));
-            client.Send(msg);
+            client.Connect(_settings.SmtpServer, _settings.SmtpPort, true); //yandex
         }
+
+        else
+        {
+            DisableCertificateValidation();
+            client.Connect(_settings.SmtpServer, _settings.SmtpPort, SecureSocketOptions.StartTls); //isod
+        }
+
+        var username = _settings.UsernameWithoutDog ? _settings.User.Split("@")[0] : _settings.User;
+        client.Authenticate(username, _settings.Password);
+
+
+        var bodyBldr = new BodyBuilder();
+        bodyBldr.TextBody = body;
+        bodyBldr.HtmlBody = body;
+        if (files != null)
+        {
+            foreach (string file in files)
+            {
+                bodyBldr.Attachments.Add(file);
+            }
+        }
+        var msg = new MimeMessage()
+        {
+            Subject = subject,
+            Body = bodyBldr.ToMessageBody(),
+        };
+        foreach (var address in toAddresses)
+        {
+            msg.To.Add(MailboxAddress.Parse(address));
+        }
+        msg.From.Add(new MailboxAddress(_settings.User, _settings.User));
+        client.Send(msg);
     }
 
     private void DisableCertificateValidation()
@@ -72,31 +72,32 @@ public class Post
     public List<Message> GetMails(DateTime onDate, string attachmentsPath)
     {
         var messages = new List<Message>();
-        
-        using (var client = new ImapClient())
+
+        using var client = new ImapClient();
+
+        if (_settings.UseSsl)
         {
-            
-            if (_settings.UseSsl)
-            {
-                client.Connect(_settings.ImapServer, _settings.ImapPort, true); //yandex
-            }
+            client.Connect(_settings.ImapServer, _settings.ImapPort, true); //yandex
+        }
 
-            else
-            {
-                DisableCertificateValidation();
-                client.Connect(_settings.ImapServer, _settings.ImapPort, SecureSocketOptions.StartTls); //isod
-            }
-                
-            var username = _settings.UsernameWithoutDog ? _settings.User.Split("@")[0] : _settings.User;
-            client.Authenticate(username, _settings.Password);
-            var inbox = client.Inbox;
-            inbox.Open(FolderAccess.ReadOnly);
-            var uids = client.Inbox.Search(SearchQuery.DeliveredOn(onDate));
-            var summaries = client.Inbox.Fetch(uids, MessageSummaryItems.Envelope | MessageSummaryItems.BodyStructure);
+        else
+        {
+            DisableCertificateValidation();
+            client.Connect(_settings.ImapServer, _settings.ImapPort, SecureSocketOptions.StartTls); //isod
+        }
 
-            if (summaries != null && summaries.Count > 0)
+        var username = _settings.UsernameWithoutDog ? _settings.User.Split("@")[0] : _settings.User;
+        client.Authenticate(username, _settings.Password);
+        var inbox = client.Inbox;
+        inbox.Open(FolderAccess.ReadOnly);
+        var uids = client.Inbox.Search(SearchQuery.DeliveredOn(onDate));
+        var summaries = client.Inbox.Fetch(uids, MessageSummaryItems.Envelope | MessageSummaryItems.BodyStructure);
+
+        if (summaries != null && summaries.Count > 0)
+        {
+            foreach (var summury in summaries)
             {
-                foreach (var summury in summaries)
+                if (!_processedMessages.Contains(summury.Envelope.MessageId))
                 {
                     var attachments = new List<string>();
                     foreach (var attachment in summury.Attachments.OfType<BodyPartBasic>())
@@ -120,21 +121,23 @@ public class Post
                         {
                             _logger.Write($"Не удалось получить вложения письма с темой \"{summury.Envelope.Subject}\", " +
                                 $"отправитель: {summury.Envelope.From.Mailboxes.FirstOrDefault()?.Address}");
+                            _processedMessages.Add(summury.Envelope.MessageId);
                             continue;
                         }
-                    }
-                    var message = new Message();
-                    message.Id = summury.Envelope.MessageId;
-                    message.Subject = summury.Envelope.Subject;
-                    var msg = inbox.GetMessage(summury.UniqueId);
-                    message.Body = GetTextFromBodyParts(msg.Body);
-                    message.Attachments = attachments;
-                    messages.Add(message);
-                    message.From = summury.Envelope.From.Mailboxes.FirstOrDefault()?.Address;
+
+                        var message = new Message();
+                        message.Id = summury.Envelope.MessageId;
+                        message.Subject = summury.Envelope.Subject;
+                        var msg = inbox.GetMessage(summury.UniqueId);
+                        message.Body = GetTextFromBodyParts(msg.Body);
+                        message.Attachments = attachments;
+                        messages.Add(message);
+                        message.From = summury.Envelope.From.Mailboxes.FirstOrDefault()?.Address;
+                    } 
                 }
             }
-            return messages;
         }
+        return messages;
     }
 
     public static string GetTextFromBodyParts(MimeEntity body)

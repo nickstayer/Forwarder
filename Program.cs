@@ -4,13 +4,13 @@ namespace Forwarder;
 
 public class Program
 {
-    private static List<string> _sentMessages = new List<string>();
+    private static List<string> _processedMessages = new List<string>();
     public static void Main()
     {
         var settingsFile = Path.Combine(Directory.GetCurrentDirectory(), "settings.json");
         var logger = Logger.UpdateLogFileName();
         var list = logger.GetMessageId();
-        _sentMessages.AddRange(list);
+        _processedMessages.AddRange(list);
         Settings? settings;
 
         //settings.PeriodMinutes = 15;
@@ -45,7 +45,7 @@ public class Program
                 Console.ReadLine();
                 return;
             }
-            var mailer = new Post(settings, logger);
+            var mailer = new Post(settings, logger, _processedMessages);
             var folderAttach = Path.Combine(Directory.GetCurrentDirectory(), "Attachments");
             List<Message> messages = new List<Message>();
 
@@ -66,7 +66,7 @@ public class Program
                         continue;
                     if (message.Subject.ToLower().Contains(Consts.KEYWORD.ToLower()))
                     {
-                        if (!_sentMessages.Contains(message.Id))
+                        if (!_processedMessages.Contains(message.Id))
                         {
                             var addrSubj = GetAddressAndSubject(message.Subject);
                             if (addrSubj.Item1.Length == 0)
@@ -83,8 +83,8 @@ public class Program
                                     mailer.SendMail(new string[] { message.From }, 
                                         "Отчет о доставке",
                                         $"Ваше сообщение \"{subject}\" для {Post.GetStringAddresses(addresses)} доставлено на сервер пересылки");
-                                if(!_sentMessages.Contains(message.Id))
-                                    _sentMessages.Add(message.Id);
+                                if(!_processedMessages.Contains(message.Id))
+                                    _processedMessages.Add(message.Id);
                                 var addr = string.Join(",", addresses);
                                 logger.Write($"От {message.From} на {addr} с темой \"{subject}\". {message.Id}");
                             }
