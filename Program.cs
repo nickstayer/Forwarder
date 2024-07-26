@@ -122,24 +122,4 @@ public class Program
         var arr = addresses.Split(",").Select(x => x.Trim()).ToArray();
         return arr;
     }
-
-    public static void CountDownMinutesToStart(int minutes)
-    {
-        if (minutes > 0)
-        {
-            var timerSize = (int)Math.Log10(minutes) + 1;
-            Console.Write(Consts.MESSAGE_COUNTDOWN);
-            for (var i = minutes; i > 0; i--)
-            {
-
-                Console.CursorLeft = Consts.MESSAGE_COUNTDOWN.Length;
-                int digitCount = (int)Math.Log10(i) + 1;
-                var gapsCount = timerSize - digitCount >= 0 ? timerSize - digitCount : 0;
-                var gaps = new string(' ', gapsCount);
-                Console.Write($"{i}{gaps}");
-                Thread.Sleep(TimeSpan.FromMinutes(1));
-            }
-            Console.WriteLine();
-        }
-    }
 }
