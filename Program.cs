@@ -12,20 +12,6 @@ public class Program
         var list = logger.GetMessageId();
         _processedMessages.AddRange(list);
         Settings? settings;
-
-        //settings.PeriodMinutes = 15;
-        //settings.SmtpServer = "post.mvd.ru";
-        //settings.SmtpPort = 587;
-        //settings.ImapServer = "post.mvd.ru";
-        //settings.ImapPort = 143;
-        //settings.BodyTextDefault = "Дубовсков Н.М. +79085781423";
-        //settings.User = "ndubovskov@mvd.ru";
-        //settings.Password = "Ghjhjxtcndj@0";
-        //settings.SerializeSettings(settingsFile);
-        //settings.Options = MailKit.Security.SecureSocketOptions.StartTls;
-        //settings.UseSsl = false;
-        //settings.UsernameWithoutDog = false;
-
         try
         {
             settings = Settings.DeserializeSettings(settingsFile);
