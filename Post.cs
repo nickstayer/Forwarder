@@ -1,6 +1,5 @@
 ﻿using MailKit;
 using MailKit.Net.Imap;
-using MailKit.Net.Smtp;
 using MailKit.Search;
 using MailKit.Security;
 using MimeKit;
@@ -23,7 +22,7 @@ public class Post
 
     public void SendMail(string[] toAddresses, string subject, string body = null, string[] files = null)
     {
-        using var client = new SmtpClient();
+        using var client = new MailKit.Net.Smtp.SmtpClient();
         if (_settings.UseSsl)
         {
             client.Connect(_settings.SmtpServer, _settings.SmtpPort, true); //yandex
@@ -99,6 +98,8 @@ public class Post
             {
                 if (!_processedMessages.Contains(summury.Envelope.MessageId))
                 {
+                    _processedMessages.Add(summury.Envelope.MessageId);
+                    _logger.Write($"{summury.Envelope.MessageId}", false);
                     var attachments = new List<string>();
                     foreach (var attachment in summury.Attachments.OfType<BodyPartBasic>())
                     {
@@ -121,19 +122,17 @@ public class Post
                         {
                             _logger.Write($"Не удалось получить вложения письма с темой \"{summury.Envelope.Subject}\", " +
                                 $"отправитель: {summury.Envelope.From.Mailboxes.FirstOrDefault()?.Address}");
-                            _processedMessages.Add(summury.Envelope.MessageId);
                             continue;
                         }
-
-                        var message = new Message();
-                        message.Id = summury.Envelope.MessageId;
-                        message.Subject = summury.Envelope.Subject;
-                        var msg = inbox.GetMessage(summury.UniqueId);
-                        message.Body = GetTextFromBodyParts(msg.Body);
-                        message.Attachments = attachments;
-                        messages.Add(message);
-                        message.From = summury.Envelope.From.Mailboxes.FirstOrDefault()?.Address;
-                    } 
+                    }
+                    var message = new Message();
+                    message.Id = summury.Envelope.MessageId;
+                    message.Subject = summury.Envelope.Subject;
+                    var msg = inbox.GetMessage(summury.UniqueId);
+                    message.Body = GetTextFromBodyParts(msg.Body);
+                    message.Attachments = attachments;
+                    messages.Add(message);
+                    message.From = summury.Envelope.From.Mailboxes.FirstOrDefault()?.Address;
                 }
             }
         }

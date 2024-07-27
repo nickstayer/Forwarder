@@ -10,7 +10,7 @@ public class Logger
         _file = file;
     }
 
-    public void Write(string _event)
+    public void Write(string _event, bool print = true)
     {
         string line;
         if(_event.StartsWith(Environment.NewLine))
@@ -20,8 +20,11 @@ public class Logger
         {
             sw.WriteLine(line);
         }
-        Console.WriteLine(line);
-    }
+        if(print)
+        {
+            Console.WriteLine(line);
+        }
+     }
 
     public static Logger UpdateLogFileName(Logger logger = null)
     {
@@ -38,7 +41,7 @@ public class Logger
         return logger;
     }
 
-    public List<string> GetMessageId()
+    public List<string> GetMessagesIdFromLog()
     {
         var result = new List<string>();
         if(!File.Exists(_file)) { return result; }
